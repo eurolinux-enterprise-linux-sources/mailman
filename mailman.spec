@@ -1,10 +1,23 @@
 # Turn off the brp-python-bytecompile script
 %global __os_install_post %(echo '%{__os_install_post}' | sed -e 's!/usr/lib[^[:space:]]*/brp-python-bytecompile[[:space:]].*$!!g')
 
+%global pythondns_from_checkout 1
+%global pythondns_commit 9329daf40d252f25597f44d5e1db8347304d707f
+%global pythondns_shortcommit %(c=%{commit}; echo ${c:0:7})
+%global pythondns_version 1.11.1
+%global pythondns_dir dnspython-%{?pythondns_from_checkout:%{pythondns_commit}}%{!?pythondns_from_checkout:%{pythondns_version}}
+
+%if 0%{?rhel} && 0%{?rhel} <= 6
+%{!?__python2: %global __python2 /usr/bin/python2}
+%{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
+%{!?python2_sitearch: %global python2_sitearch %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
+%endif
+
+
 Summary: Mailing list manager with built in Web access
 Name: mailman
 Version: 2.1.12
-Release: 18%{?dist}
+Release: 25%{?dist}
 Epoch: 3
 Group: Applications/Internet
 Source0: ftp://ftp.gnu.org/pub/gnu/mailman/mailman-%{version}.tgz
@@ -20,6 +33,11 @@ Source8: mailman-update-cfg
 # patched some files in that tarball. Therefore there is patches email tarball
 # added as separate source and used as replacement of original tarball.
 Source9: email-2.5.8.tar.gz
+%if 0%{?pythondns_from_checkout}
+Source10:        https://github.com/rthalley/python-dns/archive/%{pythondns_commit}.tar.gz
+%else
+Source10:        http://www.dnspython.org/kits/%{pythondns_version}/dnspython-%{pythondns_version}.tar.gz
+%endif
 
 Patch1: mailman-2.1.12-multimail.patch
 Patch2: mailman-2.1-build.patch
@@ -49,6 +67,11 @@ Patch24: mailman-2.1.13-no-from-escape.patch
 Patch25: mailman-2.1.9-pre-wrap.patch
 Patch26: mailman-2.1.12-ctype-new.patch
 Patch27: mailman-2.1.12-newlist-urlhost.patch
+Patch28: mailman-2.1.12-listadmin-flatten.patch
+Patch29: mailman-2.1.12-rmlist.patch
+Patch30: mailman-2.1.12-newlist-ja.patch
+Patch31: mailman-2.1.12-dmarc.patch
+Patch32: mailman-2.1.12-CVE-2015-2775.patch
 
 
 License: GPLv2+
@@ -57,6 +80,7 @@ BuildRoot: %{_tmppath}/%{name}-root
 Requires(pre): shadow-utils, /sbin/chkconfig, /sbin/service
 Requires: vixie-cron >= 4.1-9, httpd, python >= 2.2, mktemp
 BuildRequires: python-devel >= 2.2, automake
+BuildRequires: python-setuptools
 
 %define contentdir /var/www
 
@@ -70,6 +94,7 @@ BuildRequires: python-devel >= 2.2, automake
 %define docdir /usr/share/doc/%{name}-%{version}
 %define configdir /etc/%{name}
 %define datadir %{varmmdir}/data
+%define archivesdir %{varmmdir}/archives
 %define lockdir /var/lock/%{name}
 %define logdir /var/log/%{name}
 %define piddir /var/run/%{name}
@@ -149,12 +174,25 @@ additional installation steps, these are described in:
 %patch25 -p1
 %patch26 -p1
 %patch27 -p1
+%patch28 -p1 -b .flatten
+%patch29 -p1 -b .rmlist
+%patch30 -p1 -b .newlist
+%patch31 -p1 -b .dmarc
+%patch32 -p1 -b .2775
 
 # Replaces original email-2.5.8.tar.gz with the patched one
 cp %{SOURCE9} misc/email-2.5.8.tar.gz
 
 #cp $RPM_SOURCE_DIR/mailman.INSTALL.REDHAT.in INSTALL.REDHAT.in
 cp %{SOURCE5} INSTALL.REDHAT.in
+
+# python-dns prep
+tar -xf %{SOURCE10}
+pushd %{pythondns_dir}
+# strip executable permissions so that we don't pick up dependencies
+# from documentation
+find examples -type f | xargs chmod a-x
+popd
 
 %build
 
@@ -207,6 +245,11 @@ SubstituteParameters "%{SOURCE3}" "httpd-mailman.conf"
 SubstituteParameters "%{SOURCE4}" "mailman.logrotate"
 
 make
+
+# python-dns build
+pushd %{pythondns_dir}
+CFLAGS="%{optflags}" %{__python} -c 'import setuptools; execfile("setup.py")' build
+popd
 
 %install
 rm -fr $RPM_BUILD_ROOT
@@ -319,6 +362,13 @@ find $RPM_BUILD_ROOT/%{mmdir}/ -type f -a -name "*.py" -print0 | xargs -0 %{__py
 find $RPM_BUILD_ROOT/%{docdir}/ -type f -a -name "*.py" -print0 | xargs -0 %{__python} -c 'import py_compile, sys; [py_compile.compile(f, dfile=f.partition("$RPM_BUILD_ROOT")[2]) for f in sys.argv[1:]]' || :
 find $RPM_BUILD_ROOT/%{docdir}/ -type f -a -name "*.py" -print0 | xargs -0 %{__python} -O -c 'import py_compile, sys; [py_compile.compile(f, dfile=f.partition("$RPM_BUILD_ROOT")[2]) for f in sys.argv[1:]]' || :
 
+# python-dns install
+pushd %{pythondns_dir}
+%{__python} -c 'import setuptools; execfile("setup.py")' install --skip-build --root %{buildroot}
+mv %{buildroot}%{python2_sitelib}/dns %{buildroot}%{mmdir}/Mailman
+rm -rf %{buildroot}%{python2_sitelib}
+popd
+
 %clean
 rm -rf $RPM_BUILD_ROOT $RPM_BUILD_DIR/files.%{name}
 
@@ -416,6 +466,7 @@ exit 0
 %{mmdir}/cron/paths.pyc
 %{mmdir}/cron/paths.pyo
 %{mmdir}/cron/senddigests
+%{mmdir}/Mailman/dns
 #Mailman dir minus one file which is listed later
 %{mmdir}/Mailman/Archiver
 %{mmdir}/Mailman/Autoresponder.py
@@ -531,8 +582,34 @@ exit 0
 %attr(0644,root,root) %config(noreplace) %verify(not md5 size mtime) /etc/cron.d/mailman
 %attr(0644,root,%{mmgroup}) %config(noreplace) %{mmdir}/cron/crontab.in
 %attr(0755,root,root) %{_bindir}/mailman-update-cfg
+# fix for security issue #1214147
+%attr(2770,%{mmuser},%{cgigroup}) %{archivesdir}/private
 
 %changelog
+* Wed Apr 22 2015 Jan Kaluza <jkaluza@redhat.com> 3:2.1.12-25
+- fix CVE-2002-0389 - local users able to read private mailing list archives
+
+* Wed Apr 22 2015 Jan Kaluza <jkaluza@redhat.com> 3:2.1.12-24
+- fix CVE-2015-2775 - directory traversal in MTA transports
+
+* Mon Mar 16 2015 Jan Kaluza <jkaluza@redhat.com> 3:2.1.12-23
+- fix #1095359 - handle update when some mailing lists have been created
+  by newer Mailman than this one
+
+* Mon Mar 16 2015 Jan Kaluza <jkaluza@redhat.com> 3:2.1.12-22
+- fix #1095359 - add support for DMARC
+
+* Tue Feb 03 2015 Jan Kaluza <jkaluza@redhat.com> 3:2.1.12-21
+- fix #1056366 - fix bad subject of the welcome email when creating list using
+  newlist command
+
+* Fri Jan 30 2015 Jan Kaluza <jkaluza@redhat.com> 3:2.1.12-20
+- fix #745409 - do not set Indexes in httpd configuration for public archive
+- fix #1008139 - fix traceback when list_data_dir is not a child of var_prefix
+
+* Mon Dec 01 2014 Jan Kaluza <jkaluza@redhat.com> 3:2.1.12-19
+- fix #765807 - fix traceback when message is received to moderated list
+
 * Mon Jul 30 2012 Jan Kaluza <jkaluza@redhat.com> 3:2.1.12-18
 - fix #834023 - escape From in email body properly
 - fix #832920 - fix word-wrap in web front-end
