@@ -17,7 +17,7 @@
 Summary: Mailing list manager with built in Web access
 Name: mailman
 Version: 2.1.12
-Release: 25%{?dist}
+Release: 26%{?dist}
 Epoch: 3
 Group: Applications/Internet
 Source0: ftp://ftp.gnu.org/pub/gnu/mailman/mailman-%{version}.tgz
@@ -72,6 +72,8 @@ Patch29: mailman-2.1.12-rmlist.patch
 Patch30: mailman-2.1.12-newlist-ja.patch
 Patch31: mailman-2.1.12-dmarc.patch
 Patch32: mailman-2.1.12-CVE-2015-2775.patch
+# https://bugzilla.redhat.com/show_bug.cgi?id=1363835
+Patch33: mailman-2.1.12-bytecode.patch
 
 
 License: GPLv2+
@@ -179,6 +181,7 @@ additional installation steps, these are described in:
 %patch30 -p1 -b .newlist
 %patch31 -p1 -b .dmarc
 %patch32 -p1 -b .2775
+%patch33 -p2
 
 # Replaces original email-2.5.8.tar.gz with the patched one
 cp %{SOURCE9} misc/email-2.5.8.tar.gz
@@ -586,6 +589,9 @@ exit 0
 %attr(2770,%{mmuser},%{cgigroup}) %{archivesdir}/private
 
 %changelog
+* Wed Nov 16 2016 Pavel Šimerda <psimerda@redhat.com> - 3:2.1.12-26
+- Resolves: #1363835 - /etc/mm_cfg.py is a symlink to /usr
+
 * Wed Apr 22 2015 Jan Kaluza <jkaluza@redhat.com> 3:2.1.12-25
 - fix CVE-2002-0389 - local users able to read private mailing list archives
 
