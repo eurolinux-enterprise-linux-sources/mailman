@@ -4,7 +4,7 @@
 Summary: Mailing list manager with built in Web access
 Name: mailman
 Version: 2.1.12
-Release: 17%{?dist}
+Release: 18%{?dist}
 Epoch: 3
 Group: Applications/Internet
 Source0: ftp://ftp.gnu.org/pub/gnu/mailman/mailman-%{version}.tgz
@@ -31,7 +31,6 @@ Patch7: mailman-2.1.10-archive-reply.patch
 #Patch8: mailman-2.1.11-lctype.patch
 Patch9: mailman-2.1.9-ctypo-new.patch
 Patch10: mailman-2.1.10-ctypefix.patch
-Patch11: mailman-2.1.9-header-folding.patch
 Patch12: mailman-2.1.9-selinux.patch
 Patch13: mailman-2.1.9-unicode.patch
 Patch14: mailman-2.1.11-fhsinit.patch
@@ -46,6 +45,10 @@ Patch20: mailman-2.1.12-init-not-on.patch
 Patch21: mailman-2.1.12-shebang.patch
 Patch22: mailman-2.1.9-CVE-2010-3089.patch
 Patch23: mailman-2.1.9-CVE-2011-0707.patch
+Patch24: mailman-2.1.13-no-from-escape.patch
+Patch25: mailman-2.1.9-pre-wrap.patch
+Patch26: mailman-2.1.12-ctype-new.patch
+Patch27: mailman-2.1.12-newlist-urlhost.patch
 
 
 License: GPLv2+
@@ -129,7 +132,6 @@ additional installation steps, these are described in:
 #%%patch8 -p1 -b .lctype
 %patch9 -p1 -b .ctypo
 %patch10 -p1 -b .ctypefix
-%patch11 -p1 -b .header
 %patch12 -p1 -b .selinux
 %patch13 -p1 -b .unicode
 %patch14 -p1 -b .fhsinit
@@ -143,6 +145,10 @@ additional installation steps, these are described in:
 %patch21 -p1 -b .shebang
 %patch22 -b .CVE-2010-3089
 %patch23 -b .CVE-2011-0707
+%patch24 -b .no-from
+%patch25 -p1
+%patch26 -p1
+%patch27 -p1
 
 # Replaces original email-2.5.8.tar.gz with the patched one
 cp %{SOURCE9} misc/email-2.5.8.tar.gz
@@ -436,9 +442,6 @@ exit 0
 %{mmdir}/Mailman/GatewayManager.py
 %{mmdir}/Mailman/GatewayManager.pyc
 %{mmdir}/Mailman/GatewayManager.pyo
-%{mmdir}/Mailman/Generator.py
-%{mmdir}/Mailman/Generator.pyc
-%{mmdir}/Mailman/Generator.pyo
 %{mmdir}/Mailman/Gui
 %{mmdir}/Mailman/Handlers
 %{mmdir}/Mailman/htmlformat.py
@@ -530,6 +533,12 @@ exit 0
 %attr(0755,root,root) %{_bindir}/mailman-update-cfg
 
 %changelog
+* Mon Jul 30 2012 Jan Kaluza <jkaluza@redhat.com> 3:2.1.12-18
+- fix #834023 - escape From in email body properly
+- fix #832920 - fix word-wrap in web front-end
+- fix #772998 - fix reset_pw.py script
+- fix #799323 - handle urlhost in newlist script
+
 * Fri Jun 24 2011 Jan Kaluza <jkaluza@redhat.com> 3:2.1.12-17
 - fix #703389 - fixed file permissions in /usr/lib/mailman
 - fix #636825 - fix #!/usr/bin/env python shebang in migrate-fhs
