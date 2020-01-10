@@ -4,7 +4,7 @@
 Summary: Mailing list manager with built in Web access
 Name: mailman
 Version: 2.1.15
-Release: 24%{?dist}
+Release: 26%{?dist}.1
 Epoch: 3
 Group: Applications/Internet
 Source0: ftp://ftp.gnu.org/pub/gnu/mailman/mailman-%{version}.tgz
@@ -44,6 +44,8 @@ Patch24: mailman-2.1.15-CVE-2015-2775.patch
 # https://bugzilla.redhat.com/show_bug.cgi?id=1351939
 Patch25: mailman-2.1.15-rh1351939.patch
 Patch26: mailman-2.1.12-newlist-ja.patch
+Patch27: mailman-2_1-xss_vulnerability.patch
+
 
 License: GPLv2+
 URL: http://www.list.org/
@@ -142,6 +144,7 @@ additional installation steps, these are described in:
 %patch24 -p1
 %patch25 -p0
 %patch26 -p1
+%patch27 -p1 -b .xss
 
 # Change `#!/usr/bin/env python` shebang to `#!/usr/bin/python`
 sed -i '1s|^#! */usr/bin/env python$|#!/usr/bin/python|' `find -iname '*.py'`
@@ -597,6 +600,18 @@ exit 0
 %dir %attr(775,root,%{mmgroup}) %{lockdir}
 
 %changelog
+* Fri Mar 02 2018 Pavel Zhukov <pzhukov@redhat.com> - 3:2.1.15-26.1
+- Related: #1545974 - Add import regular expression module
+
+* Fri Mar 02 2018 Pavel Zhukov <pzhukov@redhat.com> - 3:2.1.15-26
+- Related: #1545974 - Bump release to make it higher than 7.5
+
+* Fri Mar 02 2018 Pavel Zhukov <pzhukov@redhat.com> - 3:2.1.15-24.2
+- Resolves: #1545974 -  Add sanitizer to mitigate XSS injection
+
+* Fri Feb 16 2018 Pavel Zhukov <pzhukov@redhat.com> - 3:2.1.15-24.1
+- Resolves: #1545974 -  Fix XSS vulnerability in web UI
+
 * Wed Feb 22 2017 Pavel Šimerda <psimerda@redhat.com> - 3:2.1.15-24
 - Resolves: #1232737 - Fix instances of #!/usr/bin/env python in mailman
 
