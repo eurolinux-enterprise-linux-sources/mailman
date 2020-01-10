@@ -4,7 +4,7 @@
 Summary: Mailing list manager with built in Web access
 Name: mailman
 Version: 2.1.15
-Release: 14%{?dist}
+Release: 17%{?dist}
 Epoch: 3
 Group: Applications/Internet
 Source0: ftp://ftp.gnu.org/pub/gnu/mailman/mailman-%{version}.tgz
@@ -428,10 +428,12 @@ exit 0
 %dir %{mmdir}/Mailman
 %{mmdir}/templates
 %{mmdir}/bin
-%{mmdir}/cgi-bin
+%dir %{mmdir}/cgi-bin/
+%attr(2755, root, %{mmgroup}) %{mmdir}/cgi-bin/*
 %dir %{mmdir}/cron
 %{mmdir}/icons
-%{mmdir}/mail
+%dir %{mmdir}/mail
+%attr(2755, root, %{mmgroup}) %{mmdir}/mail/mailman
 %{mmdir}/messages
 %{mmdir}/pythonlib
 %{mmdir}/scripts
@@ -584,6 +586,15 @@ exit 0
 %dir %attr(775,root,%{mmgroup}) %{lockdir}
 
 %changelog
+* Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 3:2.1.15-17
+- Mass rebuild 2014-01-24
+
+* Thu Jan 02 2014 Jan Kaluza <jkaluza@redhat.com> - 3:2.1.15-16
+- fix #1044496 - fix setgid for cgi and mailman binaries
+
+* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 3:2.1.15-15
+- Mass rebuild 2013-12-27
+
 * Tue Jul 23 2013 Jan Kaluza <jkaluza@redhat.com> - 3:2.1.15-14
 - build with full relro support
 
