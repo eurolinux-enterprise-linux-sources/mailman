@@ -4,7 +4,7 @@
 Summary: Mailing list manager with built in Web access
 Name: mailman
 Version: 2.1.15
-Release: 17%{?dist}
+Release: 21%{?dist}
 Epoch: 3
 Group: Applications/Internet
 Source0: ftp://ftp.gnu.org/pub/gnu/mailman/mailman-%{version}.tgz
@@ -40,11 +40,14 @@ Patch18: mailman-2.1.12-initcleanup.patch
 Patch20: mailman-2.1.12-init-not-on.patch
 Patch21: mailman-2.1.13-env-python.patch
 Patch22: mailman-2.1.15-check_perms.patch
+Patch23: mailman-2.1.12-dmarc.patch
+Patch24: mailman-2.1.15-CVE-2015-2775.patch
 
 License: GPLv2+
 URL: http://www.list.org/
 Requires(pre): shadow-utils, /sbin/chkconfig, /sbin/service
 Requires: cronie, httpd, python, coreutils
+Requires: python-dns
 Requires(post): systemd
 Requires(post): systemd-sysv
 Requires(preun): systemd
@@ -134,6 +137,8 @@ additional installation steps, these are described in:
 %patch20 -p1
 %patch21 -p1
 %patch22 -p1
+%patch23 -p1
+%patch24 -p1
 
 #cp $RPM_SOURCE_DIR/mailman.INSTALL.REDHAT.in INSTALL.REDHAT.in
 cp %{SOURCE5} INSTALL.REDHAT.in
@@ -276,8 +281,8 @@ mkdir -p %{buildroot}/%{lockdir}
 mkdir -p %{buildroot}/%{logdir}
 mkdir -p %{buildroot}/%{piddir}
 mkdir -p %{buildroot}/%{queuedir}
-
-install -p -D -m644 %{SOURCE9} %{buildroot}%{_sysconfdir}/tmpfiles.d/mailman.conf
+mkdir -p %{buildroot}/%{_tmpfilesdir}
+install -m 0644 %{SOURCE9} %{buildroot}%{_tmpfilesdir}/%{name}.conf
 
 # Systemd service file
 mkdir -p %{buildroot}%{_unitdir}
@@ -308,7 +313,7 @@ chmod %{buildroot}/%{mmdir} -s -R
 chmod g+s %{buildroot}/%{mmdir}/cgi-bin/*
 chmod g+s %{buildroot}/%{mmdir}/mail/mailman
 # no need for setgid in configdir
-chmod %{buildroot}/%{configdir} -s -R
+chmod %{buildroot}/%{configdir}/* -s -R
 
 %pre
 
@@ -574,10 +579,10 @@ exit 0
 %config(noreplace) %{httpdconfdir}/%{httpdconffile}
 %config(noreplace) /etc/logrotate.d/%{name}
 /etc/smrsh/%{mail_wrapper}
-%dir %attr(755,root,%{mmgroup}) %{configdir}
+%dir %attr(2775,root,%{mmgroup}) %{configdir}
 %attr(0644, root, %{mmgroup}) %config(noreplace) %verify(not md5 size mtime) %{configdir}/sitelist.cfg
 %attr(775,root,%{mmgroup}) %{logdir}
-%config(noreplace) %{_sysconfdir}/tmpfiles.d/mailman.conf
+%{_tmpfilesdir}/%{name}.conf
 %attr(2775,root,%{mmgroup}) %{queuedir}
 %attr(0644,root,root) %config(noreplace) %verify(not md5 size mtime) /etc/cron.d/mailman
 %attr(0644,root,%{mmgroup}) %config(noreplace) %{mmdir}/cron/crontab.in
@@ -586,6 +591,24 @@ exit 0
 %dir %attr(775,root,%{mmgroup}) %{lockdir}
 
 %changelog
+* Tue Jun 23 2015 Scientific Linux Auto Patch Process <SCIENTIFIC-LINUX-DEVEL@LISTSERV.FNAL.GOV>
+- Eliminated rpmbuild "bogus date" error due to inconsistent weekday,
+  by assuming the date is correct and changing the weekday.
+
+* Wed Jun 10 2015 Jan Kaluza <jkaluza@redhat.com> - 3:2.1.15-21
+- fix CVE-2015-2775 - directory traversal in MTA transports
+
+* Tue Mar 17 2015 Jan Kaluza <jkaluza@redhat.com> - 3:2.1.15-20
+- fix #1107652 - do not install patch backup files in documentation
+
+* Tue Mar 17 2015 Jan Kaluza <jkaluza@redhat.com> - 3:2.1.15-19
+- fix #1188043 - set 2775 permission only for /etc/mailman
+
+* Mon Mar 16 2015 Jan Kaluza <jkaluza@redhat.com> - 3:2.1.15-18
+- fix #1107652 - add support for DMARC
+- fix #1180981 - install tmpfiles.d into /usr/lib instead of /etc
+- fix #1188043 - set 2775 permission for /etc/mailman
+
 * Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 3:2.1.15-17
 - Mass rebuild 2014-01-24
 
