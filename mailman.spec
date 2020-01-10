@@ -4,7 +4,7 @@
 Summary: Mailing list manager with built in Web access
 Name: mailman
 Version: 2.1.15
-Release: 21%{?dist}
+Release: 24%{?dist}
 Epoch: 3
 Group: Applications/Internet
 Source0: ftp://ftp.gnu.org/pub/gnu/mailman/mailman-%{version}.tgz
@@ -38,10 +38,12 @@ Patch17: mailman-2.1.12-mmcfg.patch
 Patch18: mailman-2.1.12-initcleanup.patch
 # the service is now off by default
 Patch20: mailman-2.1.12-init-not-on.patch
-Patch21: mailman-2.1.13-env-python.patch
 Patch22: mailman-2.1.15-check_perms.patch
 Patch23: mailman-2.1.12-dmarc.patch
 Patch24: mailman-2.1.15-CVE-2015-2775.patch
+# https://bugzilla.redhat.com/show_bug.cgi?id=1351939
+Patch25: mailman-2.1.15-rh1351939.patch
+Patch26: mailman-2.1.12-newlist-ja.patch
 
 License: GPLv2+
 URL: http://www.list.org/
@@ -135,10 +137,14 @@ additional installation steps, these are described in:
 %patch17 -p1 -b .mmcfg
 %patch18 -p1 -b .initcleanup
 %patch20 -p1
-%patch21 -p1
 %patch22 -p1
 %patch23 -p1
 %patch24 -p1
+%patch25 -p0
+%patch26 -p1
+
+# Change `#!/usr/bin/env python` shebang to `#!/usr/bin/python`
+sed -i '1s|^#! */usr/bin/env python$|#!/usr/bin/python|' `find -iname '*.py'`
 
 #cp $RPM_SOURCE_DIR/mailman.INSTALL.REDHAT.in INSTALL.REDHAT.in
 cp %{SOURCE5} INSTALL.REDHAT.in
@@ -591,9 +597,15 @@ exit 0
 %dir %attr(775,root,%{mmgroup}) %{lockdir}
 
 %changelog
-* Tue Jun 23 2015 Scientific Linux Auto Patch Process <SCIENTIFIC-LINUX-DEVEL@LISTSERV.FNAL.GOV>
-- Eliminated rpmbuild "bogus date" error due to inconsistent weekday,
-  by assuming the date is correct and changing the weekday.
+* Wed Feb 22 2017 Pavel Šimerda <psimerda@redhat.com> - 3:2.1.15-24
+- Resolves: #1232737 - Fix instances of #!/usr/bin/env python in mailman
+
+* Wed Feb 22 2017 Pavel Šimerda <psimerda@redhat.com> - 3:2.1.15-23
+- Resolves: #1232749 - fix bad subject of the welcome email when creating list
+  using newlist command
+
+* Fri Feb 10 2017 Pavel Šimerda <psimerda@redhat.com> - 3:2.1.15-22
+- Resolves: #1351939 - Mailman 2.1.15 and later crashes on more email
 
 * Wed Jun 10 2015 Jan Kaluza <jkaluza@redhat.com> - 3:2.1.15-21
 - fix CVE-2015-2775 - directory traversal in MTA transports
